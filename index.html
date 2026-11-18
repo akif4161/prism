@@ -16,22 +16,16 @@ input{background:#0b1026;border:1px solid #333;padding:12px;border-radius:12px;w
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-<!-- GİRİŞ EKRANI -->
 <div id="loginScreen" class="glass p-6 w-full max-w-md">
   <h1 class="text-4xl font-black text-center">PRISM<span class="text-cyan-400"> AI</span></h1>
   <p class="text-center text-gray-400 text-sm mt-1 mb-6">Geleceğin zekasına hoş geldin</p>
-  
   <input id="email" type="email" placeholder="E-posta" class="mb-3">
   <input id="password" type="password" placeholder="Şifre (en az 6 karakter)" class="mb-4">
-  
   <button onclick="loginEmail()" class="btn-main mb-3">Giriş Yap / Kayıt Ol</button>
   <button onclick="loginGuest()" class="w-full p-3 rounded-xl border border-white/20 bg-white/5">Misafir Olarak Devam Et</button>
-  
   <p id="errorMsg" class="text-red-400 text-sm text-center mt-4"></p>
-  <p class="text-center text-xs text-gray-500 mt-4">Giriş yaparsan sohbetin kaydedilir. Misafirde kaydedilmez.</p>
 </div>
 
-<!-- SOHBET EKRANI -->
 <div id="chatScreen" class="hidden w-full max-w-2xl">
   <div class="flex justify-between items-center mb-4">
     <h2 class="text-2xl font-black">PRISM <span class="text-cyan-400">AI</span></h2>
@@ -47,7 +41,10 @@ input{background:#0b1026;border:1px solid #333;padding:12px;border-radius:12px;w
 </div>
 
 <script>
-// ===== FIREBASE AYARLARIN - SENİN FOTOĞRAFTAN ALINDI =====
+// ===== 1. GROQ ANAHTARINI BURAYA YAPIŞTIR =====
+const GROQ_API_KEY = "BURAYA_GROQ_ANAHTARINI_YAPISTIR";
+
+// ===== 2. FIREBASE AYARLARIN =====
 const firebaseConfig = {
   apiKey: "AIzaSyDVl8A6j0mqFkP2OujjBuC8MTqBoJiMDz8",
   authDomain: "prismai-7933b.firebaseapp.com",
@@ -77,33 +74,46 @@ async function loginEmail(){
   err.textContent = "";
   if(!email || !pass){ err.textContent = "E-posta ve şifre yaz kral"; return; }
   if(pass.length < 6){ err.textContent = "Şifre en az 6 karakter olmalı"; return; }
-  try{
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch(e){
+  try{ await auth.signInWithEmailAndPassword(email, pass); }
+  catch(e){
     if(e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential'){
       try{ await auth.createUserWithEmailAndPassword(email, pass); }
       catch(e2){ err.textContent = "Hata: " + e2.message; }
-    } else {
-      err.textContent = "Hata: " + e.message;
-    }
+    } else { err.textContent = "Hata: " + e.message; }
   }
 }
-
 async function loginGuest(){
   try{ await auth.signInAnonymously(); }
-  catch(e){ document.getElementById('errorMsg').textContent = "Misafir giriş için Firebase'de Anonim'i açman lazım: " + e.message; }
+  catch(e){ document.getElementById('errorMsg').textContent = "Firebase'de Anonim'i açman lazım: " + e.message; }
 }
-
 function logout(){ auth.signOut(); }
 
-function sendMsg(){
+async function sendMsg(){
   const inp = document.getElementById('userInput');
   const txt = inp.value.trim();
   if(!txt) return;
   const box = document.getElementById('messages');
   box.innerHTML += `<div class="bg-white/10 p-3 rounded-xl text-right ml-10">${txt}</div>`;
-  box.innerHTML += `<div class="bg-cyan-500/20 p-3 rounded-xl mr-10">Bunu aldım kral 💎 Groq anahtarını ekleyince tam cevap vereceğim. Şimdilik Firebase girişin çalışıyor mu diye test ediyoruz.</div>`;
   inp.value = "";
+  const loadingId = "msg-" + Date.now();
+  box.innerHTML += `<div id="${loadingId}" class="bg-cyan-500/20 p-3 rounded-xl mr-10">Yazıyor... 💎</div>`;
+  box.scrollTop = box.scrollHeight;
+
+  try{
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + GROQ_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{role:"system", content:"Sen PRISM AI'sın, Türkçe konuş, samimi ve akıllı ol."},{role:"user", content: txt}]
+      })
+    });
+    const data = await res.json();
+    const cevap = data.choices?.[0]?.message?.content || "Cevap alamadım, anahtarı kontrol et kral.";
+    document.getElementById(loadingId).textContent = cevap;
+  }catch(e){
+    document.getElementById(loadingId).textContent = "Hata oldu kral, Groq anahtarını kontrol et.";
+  }
   box.scrollTop = box.scrollHeight;
 }
 </script>
