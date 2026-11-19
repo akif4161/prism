@@ -4,118 +4,136 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PRISM AI</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <style>
-body{background:#050816;color:white;font-family:sans-serif}
-.glass{background:rgba(255,255,255,0.08);backdrop-filter:blur(15px);border:1px solid rgba(255,255,255,0.15);border-radius:20px}
-.btn-main{background:linear-gradient(90deg,#00d4ff,#7b2ff7);padding:12px;border-radius:12px;font-weight:bold;width:100%}
-input{background:#0b1026;border:1px solid #333;padding:12px;border-radius:12px;width:100%;outline:none;color:white}
+  body{background:#050508;color:white;font-family:Arial;text-align:center;padding:20px;margin:0}
+  h1{font-size:42px;letter-spacing:5px;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .box{background:#111118;border:1px solid #2a2a3a;border-radius:20px;padding:20px;max-width:480px;margin:15px auto}
+  input{width:90%;padding:12px;margin:8px 0;border-radius:10px;border:1px solid #333;background:#1a1a24;color:white;outline:none}
+  button{padding:12px 18px;border:none;border-radius:12px;margin:5px;font-weight:bold;cursor:pointer}
+  .mor{background:#7c3aed;color:white}
+  .mavi{background:#2563eb;color:white}
+  .yesil{background:#16a34a;color:white}
+  .kirmizi{background:#dc2626;color:white}
+  #cevap{background:#1a1a24;padding:15px;border-radius:12px;min-height:60px;text-align:left;margin-top:10px}
+  #durum{font-size:13px;color:#a78bfa}
 </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body>
 
-<div id="loginScreen" class="glass p-6 w-full max-w-md">
-  <h1 class="text-4xl font-black text-center">PRISM<span class="text-cyan-400"> AI</span></h1>
-  <p class="text-center text-gray-400 text-sm mt-1 mb-6">Geleceğin zekasına hoş geldin</p>
-  <input id="email" type="email" placeholder="E-posta" class="mb-3">
-  <input id="password" type="password" placeholder="Şifre (en az 6 karakter)" class="mb-4">
-  <button onclick="loginEmail()" class="btn-main mb-3">Giriş Yap / Kayıt Ol</button>
-  <button onclick="loginGuest()" class="w-full p-3 rounded-xl border border-white/20 bg-white/5">Misafir Olarak Devam Et</button>
-  <p id="errorMsg" class="text-red-400 text-sm text-center mt-4"></p>
+<h1>PRISM AI</h1>
+<p>Gelecek burada. İzleyen değil, yazan ol.</p>
+
+<!-- GİRİŞ -->
+<div class="box">
+  <h3>🔐 Giriş</h3>
+  <input id="email" placeholder="Email">
+  <input id="sifre" type="password" placeholder="Şifre">
+  <button class="mor" onclick="kayitOl()">Kayıt Ol</button>
+  <button class="mavi" onclick="girisYap()">Giriş Yap</button>
+  <p id="kullanici" style="font-size:13px;color:#aaa"></p>
 </div>
 
-<div id="chatScreen" class="hidden w-full max-w-2xl">
-  <div class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl font-black">PRISM <span class="text-cyan-400">AI</span></h2>
-    <button onclick="logout()" class="text-sm bg-red-500/20 text-red-300 px-3 py-1 rounded-lg">Çıkış Yap</button>
-  </div>
-  <div id="messages" class="glass p-4 h-[450px] overflow-y-auto mb-3 space-y-3">
-    <div class="bg-cyan-500/20 p-3 rounded-xl">Selam! Ben PRISM. Sana nasıl yardımcı olayım? 💎</div>
-  </div>
-  <div class="flex gap-2">
-    <input id="userInput" placeholder="Bir şey yaz..." onkeypress="if(event.key==='Enter') sendMsg()">
-    <button onclick="sendMsg()" class="bg-cyan-500 px-5 rounded-xl font-bold">Gönder</button>
-  </div>
+<!-- SESLİ + LIVE -->
+<div class="box">
+  <h3>🎙️ Sesli Konuşma + Live Modu</h3>
+  <p id="durum">Hazır, dinlemiyorum</p>
+  <button class="yesil" onclick="dinle()">🎤 Konuş</button>
+  <button class="mavi" onclick="liveBaslat()">🔴 Live Başlat</button>
+  <button class="kirmizi" onclick="liveDurdur()">⏹️ Live Durdur</button>
+  <button class="mor" onclick="konus('Selam kral, PRISM Live modundayım, seni dinliyorum')">🔊 Test Sesi</button>
+  <div id="cevap">Burada ne dediğin ve PRISM'in cevabı çıkacak...</div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ===== 1. GROQ ANAHTARINI BURAYA YAPIŞTIR =====
-const GROQ_API_KEY = "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";
+  // BURAYI KENDİ BİLGİLERİNLE DEĞİŞTİR
+  const SUPABASE_URL = "BURAYA_PROJECT_URL";
+  const SUPABASE_KEY = "BURAYA_ANON_KEY";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ===== 2. FIREBASE AYARLARIN =====
-const firebaseConfig = {
-  apiKey: "AIzaSyDVl8A6j0mqFkP2OujjBuC8MTqBoJiMDz8",
-  authDomain: "AIzaSyDVl8A6j0mqFkP2OujjBuC8MTqBoJiMDz8",
-  projectId: "prismai-7933b",
-  storageBucket: "prismai-7933b.firebasestorage.app",
-  messagingSenderId: "818649887767",
-  appId: "1:818649887767:web:233444f96483a52c331852",
-  measurementId: "G-RJQSHHQSXK"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-
-auth.onAuthStateChanged(user => {
-  if(user){
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('chatScreen').classList.remove('hidden');
-  } else {
-    document.getElementById('loginScreen').classList.remove('hidden');
-    document.getElementById('chatScreen').classList.add('hidden');
+  async function kayitOl(){
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('sifre').value;
+    const { error } = await supabase.auth.signUp({ email, password });
+    if(error) alert(error.message); else alert('Kayıt oldu, mailini kontrol et!');
   }
-});
-
-async function loginEmail(){
-  const email = document.getElementById('email').value.trim();
-  const pass = document.getElementById('password').value;
-  const err = document.getElementById('errorMsg');
-  err.textContent = "";
-  if(!email || !pass){ err.textContent = "E-posta ve şifre yaz kral"; return; }
-  if(pass.length < 6){ err.textContent = "Şifre en az 6 karakter olmalı"; return; }
-  try{ await auth.signInWithEmailAndPassword(email, pass); }
-  catch(e){
-    if(e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential'){
-      try{ await auth.createUserWithEmailAndPassword(email, pass); }
-      catch(e2){ err.textContent = "Hata: " + e2.message; }
-    } else { err.textContent = "Hata: " + e.message; }
+  async function girisYap(){
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('sifre').value;
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    if(error) alert(error.message);
+    else { document.getElementById('kullanici').innerText = 'Hoşgeldin: ' + data.user.email; alert('Giriş başarılı 💎'); }
   }
-}
-async function loginGuest(){
-  try{ await auth.signInAnonymously(); }
-  catch(e){ document.getElementById('errorMsg').textContent = "Firebase'de Anonim'i açman lazım: " + e.message; }
-}
-function logout(){ auth.signOut(); }
 
-async function sendMsg(){
-  const inp = document.getElementById('userInput');
-  const txt = inp.value.trim();
-  if(!txt) return;
-  const box = document.getElementById('messages');
-  box.innerHTML += `<div class="bg-white/10 p-3 rounded-xl text-right ml-10">${txt}</div>`;
-  inp.value = "";
-  const loadingId = "msg-" + Date.now();
-  box.innerHTML += `<div id="${loadingId}" class="bg-cyan-500/20 p-3 rounded-xl mr-10">Yazıyor... 💎</div>`;
-  box.scrollTop = box.scrollHeight;
+  // SESLİ KONUŞMA
+  let recognition;
+  let liveAcik = false;
 
-  try{
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + GROQ_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [{role:"system", content:"Sen PRISM AI'sın, Türkçe konuş, samimi ve akıllı ol."},{role:"user", content: txt}]
-      })
-    });
-    const data = await res.json();
-    const cevap = data.choices?.[0]?.message?.content || "Cevap alamadım, anahtarı kontrol et kral.";
-    document.getElementById(loadingId).textContent = cevap;
-  }catch(e){
-    document.getElementById(loadingId).textContent = "Hata oldu kral, Groq anahtarını kontrol et.";
+  function konus(metin){
+    const ses = new SpeechSynthesisUtterance(metin);
+    ses.lang = 'tr-TR';
+    ses.rate = 1;
+    window.speechSynthesis.speak(ses);
   }
-  box.scrollTop = box.scrollHeight;
-}
+
+  function cevapUret(sordu){
+    sordu = sordu.toLowerCase();
+    let cevap = "Anladım kral, " + sordu + " hakkında düşünüyorum, çok iyi bir fikir.";
+    if(sordu.includes('selam') || sordu.includes('merhaba')) cevap = "Selam kral! PRISM burada, seni dinliyorum.";
+    if(sordu.includes('nasılsın')) cevap = "Çok iyiyim, seninle konuşunca daha da iyi oldum.";
+    if(sordu.includes('prism')) cevap = "PRISM benim, geleceği yazmak için buradayım. İzleyen değil, yazan ol.";
+    if(sordu.includes('kimsin')) cevap = "Ben PRISM AI, senin yapay zeka dostunum.";
+    if(sordu.includes('şaka')) cevap = "Sana bir şaka yapayım, yapay zeka niye denize girmemiş? Çünkü verileri ıslanırmış.";
+    document.getElementById('cevap').innerHTML = "<b>Sen:</b> " + sordu + "<br><br><b>PRISM:</b> " + cevap;
+    konus(cevap);
+  }
+
+  function dinle(){
+    if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
+      alert('Telefonun bu tarayıcıda ses tanımayı desteklemiyor. Chrome kullan kral.');
+      return;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'tr-TR';
+    recognition.interimResults = false;
+    document.getElementById('durum').innerText = '🎤 Dinliyorum... Konuş kral';
+    recognition.start();
+    recognition.onresult = (e) => {
+      const metin = e.results[0][0].transcript;
+      document.getElementById('durum').innerText = 'Duydum: ' + metin;
+      cevapUret(metin);
+    };
+    recognition.onerror = () => { document.getElementById('durum').innerText = 'Bir hata oldu, tekrar dene'; }
+  }
+
+  function liveBaslat(){
+    liveAcik = true;
+    document.getElementById('durum').innerText = '🔴 LIVE AÇIK - Sürekli dinliyorum';
+    konus('Live modu açıldı kral, seni dinliyorum');
+    liveDongu();
+  }
+  function liveDurdur(){
+    liveAcik = false;
+    if(recognition) recognition.stop();
+    document.getElementById('durum').innerText = 'Live kapatıldı';
+    window.speechSynthesis.cancel();
+  }
+  function liveDongu(){
+    if(!liveAcik) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'tr-TR';
+    recognition.continuous = false;
+    recognition.start();
+    recognition.onresult = (e) => {
+      const metin = e.results[0][0].transcript;
+      cevapUret(metin);
+      setTimeout(()=>{ if(liveAcik) liveDongu(); }, 1500);
+    };
+    recognition.onerror = () => { if(liveAcik) setTimeout(liveDongu, 1000); };
+    recognition.onend = () => { if(liveAcik) setTimeout(liveDongu, 500); };
+  }
 </script>
 </body>
 </html>
