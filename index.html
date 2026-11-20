@@ -14,6 +14,7 @@
   .mavi{background:#2563eb;color:white}
   .yesil{background:#16a34a;color:white}
   .kirmizi{background:#dc2626;color:white}
+  .gri{background:#2a2a3a;color:white}
   #cevap{background:#1a1a24;padding:15px;border-radius:12px;min-height:60px;text-align:left;margin-top:10px}
   #durum{font-size:13px;color:#a78bfa}
 </style>
@@ -24,12 +25,16 @@
 <p>Gelecek burada. İzleyen değil, yazan ol.</p>
 
 <!-- GİRİŞ -->
-<div class="box">
+<div class="box" id="girisKutusu">
   <h3>🔐 Giriş</h3>
   <input id="email" placeholder="Email">
   <input id="sifre" type="password" placeholder="Şifre">
+  <br>
   <button class="mor" onclick="kayitOl()">Kayıt Ol</button>
   <button class="mavi" onclick="girisYap()">Giriş Yap</button>
+  <br>
+  <button class="gri" onclick="googleGiris()">🔵 Google ile Giriş</button>
+  <button class="gri" onclick="misafirGiris()">👤 Misafir Olarak Devam Et</button>
   <p id="kullanici" style="font-size:13px;color:#aaa"></p>
 </div>
 
@@ -46,23 +51,37 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // BURAYI KENDİ BİLGİLERİNLE DEĞİŞTİR
+  // BURAYI KENDİ BİLGİLERİNLE DEĞİŞTİR - TÜRKÇE ANLATIMI
+  // 1.si = Proje Bağlantı Adresin
+  // 2.si = Herkese Açık Anahtarın (anon / publishable)
   const SUPABASE_URL = "BURAYA_PROJECT_URL";
   const SUPABASE_KEY = "BURAYA_ANON_KEY";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // MAIL İLE KAYIT
   async function kayitOl(){
     const email = document.getElementById('email').value;
     const password = document.getElementById('sifre').value;
     const { error } = await supabase.auth.signUp({ email, password });
     if(error) alert(error.message); else alert('Kayıt oldu, mailini kontrol et!');
   }
+  // MAIL İLE GİRİŞ
   async function girisYap(){
     const email = document.getElementById('email').value;
     const password = document.getElementById('sifre').value;
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if(error) alert(error.message);
     else { document.getElementById('kullanici').innerText = 'Hoşgeldin: ' + data.user.email; alert('Giriş başarılı 💎'); }
+  }
+  // GOOGLE İLE GİRİŞ
+  async function googleGiris(){
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+    if(error) alert(error.message);
+  }
+  // MİSAFİR GİRİŞİ - Supabase istemez
+  function misafirGiris(){
+    document.getElementById('kullanici').innerText = 'Misafir olarak devam ediyorsun 👤';
+    alert('Misafir olarak girdin kral, hoşgeldin!');
   }
 
   // SESLİ KONUŞMA
@@ -90,7 +109,7 @@
 
   function dinle(){
     if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
-      alert('Telefonun bu tarayıcıda ses tanımayı desteklemiyor. Chrome kullan kral.');
+      alert('Bu tarayıcı ses tanımayı desteklemiyor. Chrome kullan kral.');
       return;
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
